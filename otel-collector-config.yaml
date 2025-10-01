@@ -1,0 +1,35 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+      http:
+
+exporters:
+  # This exporter is for logging traces to the console of the collector.
+  # Useful for debugging.
+  logging:
+    loglevel: debug
+
+  # This exporter sends traces to Jaeger.
+  jaeger:
+    endpoint: "jaeger:14250"
+    tls:
+      insecure: true
+
+  # You could add other exporters here for production, e.g., Datadog.
+  # datadog:
+  #   api:
+  #     key: ${DD_API_KEY}
+  #     site: ${DD_SITE}
+
+processors:
+  batch:
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [logging, jaeger]
+      # For production, you might switch to:
+      # exporters: [datadog]

@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: eml-parser-api
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app/app # Mount local code for live reloading
+    depends_on:
+      - otel-collector
+    networks:
+      - app-network
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: otel-collector
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    ports:
+      - "4317:4317" # OTLP gRPC receiver
+      - "4318:4318" # OTLP HTTP receiver
+    networks:
+      - app-network
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger
+    ports:
+      - "16686:16686" # Jaeger UI
+      - "14268:14268" # Jaeger collector
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    networks:
+      - app-network
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: mailpit
+    ports:
+      - "8025:8025" # Web UI
+      - "1025:1025" # SMTP Port
+    networks:
+      - app-network
+
+  postfix:
+    image: "mwader/postfix-relay"
+    container_name: postfix
+    environment:
+      - "RELAY_HOST=mailpit" # Relay emails to Mailpit for inspection
+      - "RELAY_PORT=1025"
+      - "RELAY_USER=" # No auth needed for Mailpit
+      - "RELAY_PASS="
+      - "MAILNAME=eml-parser.local" # Your server's domain
+    ports:
+      - "25:25" # Standard SMTP port
+    restart: always
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
