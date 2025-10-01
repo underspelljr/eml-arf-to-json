@@ -44,6 +44,7 @@ The project is built with a clean, modular architecture, includes automated test
 ---
 
 ## Project Structure
+```
 .
 ├── app/
 │ ├── api/
@@ -81,6 +82,7 @@ The project is built with a clean, modular architecture, includes automated test
 ├── README.md
 └── requirements.txt
 
+```
 
 ---
 
