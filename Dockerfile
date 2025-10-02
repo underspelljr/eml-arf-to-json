@@ -30,6 +30,7 @@ RUN pip install --no-cache /wheels/*
 
 # Copy application code
 COPY ./app ./app
+COPY ./labeling_guide.md .
 
 # Change ownership to the non-root user
 RUN chown -R app:app /app

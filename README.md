@@ -47,40 +47,41 @@ The project is built with a clean, modular architecture, includes automated test
 ```
 .
 ├── app/
-│ ├── api/
-│ │ ├── v1/
-│ │ │ ├── endpoints/
-│ │ │ │ ├── parser.py
-│ │ │ │ └── status.py
-│ │ │ └── api.py
-│ │ └── init.py
-│ ├── core/
-│ │ ├── config.py
-│ │ ├── logging_config.py
-│ │ └── telemetry.py
-│ ├── schemas/
-│ │ ├── message.py
-│ │ └── status.py
-│ ├── services/
-│ │ └── parser_service.py
-│ └── main.py
+│   ├── api/
+│   │   └── v1/
+│   │       ├── endpoints/
+│   │       │   ├── parser.py
+│   │       │   ├── rules.py  <-- New
+│   │       │   └── status.py
+│   │       └── api.py
+│   ├── core/
+│   │   ├── config.py
+│   │   ├── logging_config.py
+│   │   └── telemetry.py
+│   ├── schemas/
+│   │   ├── message.py
+│   │   ├── rule_generation.py <-- New
+│   │   └── status.py
+│   ├── services/
+│   │   ├── ollama_service.py <-- New
+│   │   └── parser_service.py
+│   └── main.py
 ├── tests/
-│ ├── integration/
-│ │ └── test_api.py
-│ ├── unit/
-│ │ └── test_parser_service.py
-│ ├── conftest.py
-│ └── sample_data/
-│ └── sample.eml
+│   ├── integration/
+│   │   └── test_api.py
+│   └── unit/
+│       └── test_parser_service.py
 ├── .env.example
-├── docker-compose.prod.yml
 ├── docker-compose.yml
 ├── Dockerfile
 ├── HISTORY.md
-├── otel-collector-config.yaml
+├── labeling_guide.md <-- New (model guide)
+├── otel-collector-config-yaml 
 ├── pyproject.toml
 ├── README.md
-└── requirements.txt
+├── requirements.txt
+└── ...
+
 
 ```
 
@@ -91,11 +92,61 @@ The project is built with a clean, modular architecture, includes automated test
 ### Prerequisites
 - **Python 3.10+**  
 - **Docker** and **Docker Compose**  
+- A copy of **labeling_guide.md** in the project root
 - An `.env` file (you can copy `.env.example`)  
 
 ### Local Development Setup
 Clone the repository:
 
 ```bash
-git clone <your-repo-url>
-cd <your-repo-name>
+git clone https://github.com/underspelljr/eml-arf-to-json
+cd https://github.com/underspelljr/eml-arf-to-json
+cp .env.example .env
+
+```
+
+### Start the Docker services:
+
+```bash
+docker-compose up --build -d
+```
+### Pull an Ollama model (one-time setup):
+
+```bash
+docker-compose exec ollama ollama pull llama3
+```
+
+- You can replace llama3 with any other model you prefer (e.g., mistral, gemma).
+
+### Running the Application
+
+- API:              http://localhost:8000
+- API Docs (Swagger): http://localhost:8000/docs
+- Jaeger UI:        http://localhost:16686
+- Ollama API:       http://localhost:11434
+
+
+### Running Tests 
+
+# Install dev dependencies
+pip install -r requirements.txt
+
+# Run tests
+pytest
+
+### API Documentation
+
+Swagger UI: http://localhost:8000/docs
+ReDoc:      http://localhost:8000/redoc
+
+New endpoint available:
+/api/v1/rules/generate_from_file
+
+### Config
+```bash
+Variable        | Description                          | Default
+---------------------------------------------------------------
+OLLAMA_HOST     | Base URL for the Ollama service      | http://ollama:11434
+OLLAMA_MODEL    | The name of the LLM model to use     | llama3
+```
+
