@@ -3,7 +3,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     """
-
     Application settings are loaded from environment variables.
     Pydantic v2's BaseSettings handles the loading and validation.
     """
@@ -16,6 +15,10 @@ class Settings(BaseSettings):
     OTEL_SERVICE_NAME: str = "eml-parser-api"
     OTEL_EXPORTER_OTLP_ENDPOINT: str = "http://otel-collector:4317"
 
+    # Ollama Settings
+    OLLAMA_HOST: str = "http://ollama:11434"
+    OLLAMA_MODEL: str = "llama3"
+
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
@@ -23,3 +26,4 @@ class Settings(BaseSettings):
 
 # Instantiate the settings
 settings = Settings()
+

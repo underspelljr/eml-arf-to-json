@@ -12,8 +12,20 @@ services:
       - "8000:8000"
     volumes:
       - ./app:/app/app # Mount local code for live reloading
+      - ./labeling_guide.md:/app/labeling_guide.md # Mount the guide for the service
     depends_on:
       - otel-collector
+      - ollama
+    networks:
+      - app-network
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
     networks:
       - app-network
 
@@ -53,17 +65,21 @@ services:
     image: "mwader/postfix-relay"
     container_name: postfix
     environment:
-      - "RELAY_HOST=mailpit" # Relay emails to Mailpit for inspection
+      - "RELAY_HOST=mailpit"
       - "RELAY_PORT=1025"
-      - "RELAY_USER=" # No auth needed for Mailpit
+      - "RELAY_USER="
       - "RELAY_PASS="
-      - "MAILNAME=eml-parser.local" # Your server's domain
+      - "MAILNAME=eml-parser.local"
     ports:
-      - "25:25" # Standard SMTP port
+      - "25:25"
     restart: always
     networks:
       - app-network
 
+volumes:
+  ollama_data:
+
 networks:
   app-network:
     driver: bridge
+
