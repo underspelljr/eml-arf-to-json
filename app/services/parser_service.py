@@ -1,11 +1,11 @@
 import json
 import logging
+import datetime
 from typing import Any, Dict
 
 from eml_parser import EmlParser
 
 logger = logging.getLogger(__name__)
-
 
 def parse_eml_content(eml_bytes: bytes) -> Dict[str, Any]:
     """
@@ -27,21 +27,14 @@ def parse_eml_content(eml_bytes: bytes) -> Dict[str, Any]:
     
     try:
         logger.debug("Attempting to parse EML content.")
-        # The library expects a JSON string, so we decode bytes if necessary,
-        # but it can often handle bytes directly. Let's try parsing directly.
-        # The library's `decode` method handles the heavy lifting.
         parsed_eml = ep.decode_email_bytes(eml_bytes)
         logger.info("EML content parsed successfully.")
 
-        # The output can contain non-serializable types like datetime.
-        # The library author suggests using json.dumps with a default handler.
         def json_default_serializer(o):
             if hasattr(o, "isoformat"):
                 return o.isoformat()
             raise TypeError(f"Object of type {o.__class__.__name__} is not JSON serializable")
 
-        # To ensure the final output is a clean dictionary, we serialize and then deserialize.
-        # This is a robust way to handle any complex objects from the parser.
         eml_json_str = json.dumps(parsed_eml, default=json_default_serializer)
         clean_dict = json.loads(eml_json_str)
 

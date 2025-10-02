@@ -35,4 +35,23 @@
 - Added integration tests for the new rule generation endpoint, using `pytest-mock` to mock the Ollama API call.  
 - Updated `README.md` with new setup instructions for pulling an Ollama model and documenting the new feature.  
 
----
+## 0.3.0 (2025-10-02)
+### Feature: PostgreSQL Database Integration
+- Integrated PostgreSQL database for persistent storage of email data.
+- Added `db` service to `docker-compose.yml` for running a PostgreSQL container.
+- Updated `requirements.txt` with `SQLAlchemy`, `alembic`, and `psycopg2-binary`.
+- Configured `.env.example` and `app/core/config.py` for PostgreSQL connection settings.
+- Created `app/db/session.py` for database session management.
+- Created `app/models/email.py` with `ParsedEmail` and `RawEmail` SQLAlchemy models.
+- Initialized and configured Alembic for database migrations.
+- Generated and applied initial migration to create `parsed_emails` and `raw_emails` tables.
+- Modified `app/services/parser_service.py` to parse EML content and return structured data.
+- Modified `app/api/v1/endpoints/parser.py` to save raw email content, parsed data, and Ollama evaluation to the database.
+- Added a new API endpoint `/api/v1/emails` to retrieve all parsed emails from the database.
+
+## 0.4.0 (2025-10-02)
+### Feature: Frontend for Database Visualization and File Upload
+- Added a simple frontend using HTML, CSS (Bootstrap), and JavaScript to visualize `parsed_emails` and `raw_emails` tables.
+- Implemented a file upload form in the frontend to submit EML/ARF files for analysis and database storage.
+- Modified `app/main.py` to serve static files and redirect the root URL to the visualization page.
+- Modified `app/api/v1/endpoints/rules.py` to save raw email content, parsed data, and Ollama evaluation to the database when an EML/ARF file is submitted to `/api/v1/rules/generate_from_file`.

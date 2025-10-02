@@ -1,13 +1,25 @@
+import datetime
+import json
 import logging
 
-from fastapi import APIRouter, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from sqlalchemy.orm import Session
 
+from app.db.session import SessionLocal
+from app.models.email import ParsedEmail, RawEmail
 from app.schemas.rule_generation import RuleGenerationResponse
 from app.services.ollama_service import generate_rules_for_eml
 from app.services.parser_service import parse_eml_content
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 @router.post(
@@ -20,7 +32,8 @@ logger = logging.getLogger(__name__)
 async def generate_rules_from_eml_file(
     file: UploadFile = File(
         ..., description="The .eml or .arf file to be analyzed."
-    )
+    ),
+    db: Session = Depends(get_db)
 ):
     """
     Parses an uploaded EML file, sends the structured data to Ollama
@@ -47,6 +60,13 @@ async def generate_rules_from_eml_file(
             "Read %d bytes from '%s' for parsing.", len(content), file.filename
         )
 
+        # Save raw email content
+        raw_email_entry = RawEmail(raw_content=content.decode('utf-8', errors='ignore'))
+        db.add(raw_email_entry)
+        db.commit()
+        db.refresh(raw_email_entry)
+        logger.info("Raw EML content saved to database with ID: %s", raw_email_entry.id)
+
         # Step 1: Parse the EML file content
         parsed_data = parse_eml_content(content)
         logger.info("Successfully parsed file '%s'.", file.filename)
@@ -56,6 +76,34 @@ async def generate_rules_from_eml_file(
         logger.info(
             "Successfully generated rules for file '%s'.", file.filename
         )
+
+        # Extract fields for parsed_emails table
+        from_address = parsed_data.get("header", {}).get("from", [""])[0]
+        to_address = parsed_data.get("header", {}).get("to", [""])[0]
+        subject = parsed_data.get("header", {}).get("subject", [""])[0]
+        date_str = parsed_data.get("header", {}).get("date", [""])[0]
+        # Attempt to parse date, default to current UTC if parsing fails
+        try:
+            date_obj = datetime.datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+        except ValueError:
+            date_obj = datetime.datetime.utcnow()
+
+        sender_ip = parsed_data.get("header", {}).get("received_ip", [""])[0]
+
+        # Save parsed data to database
+        parsed_email_entry = ParsedEmail(
+            from_address=from_address,
+            to_address=to_address,
+            subject=subject,
+            date=date_obj,
+            sender_ip=sender_ip,
+            ollama_evaluation=json.dumps(analysis_result), # Store as JSON string
+            raw_email_id=raw_email_entry.id
+        )
+        db.add(parsed_email_entry)
+        db.commit()
+        db.refresh(parsed_email_entry)
+        logger.info("Parsed EML data saved to database with ID: %s", parsed_email_entry.id)
 
         return analysis_result
 
