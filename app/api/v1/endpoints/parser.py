@@ -52,7 +52,7 @@ async def parse_message_file(
         logger.debug("Successfully read %d bytes from '%s'.", len(content), file.filename)
         
         # Save raw email content
-        raw_email_entry = RawEmail(raw_content=content.decode('utf-8', errors='ignore'))
+        raw_email_entry = RawEmail(raw_content=content.decode('utf-8', errors='ignore').replace('\x00', ''))
         db.add(raw_email_entry)
         db.commit()
         db.refresh(raw_email_entry)
@@ -65,9 +65,11 @@ async def parse_message_file(
         ollama_evaluation = await generate_rules_for_eml(parsed_data_for_ollama)
 
         # Extract fields for parsed_emails table
-        from_address = parsed_data_for_ollama.get("header", {}).get("from", [""])[0]
+        from_address_list = parsed_data_for_ollama.get("header", {}).get("from", [""])
+        from_address = ", ".join(from_address_list) if isinstance(from_address_list, list) else from_address_list
         to_address = parsed_data_for_ollama.get("header", {}).get("to", [""])[0]
-        subject = parsed_data_for_ollama.get("header", {}).get("subject", [""])[0]
+        subject_list = parsed_data_for_ollama.get("header", {}).get("subject", [""])
+        subject = ", ".join(subject_list) if isinstance(subject_list, list) else subject_list
         date_str = parsed_data_for_ollama.get("header", {}).get("date", [""])[0]
         # Attempt to parse date, default to current UTC if parsing fails
         try:
@@ -85,11 +87,13 @@ async def parse_message_file(
             date=date_obj,
             sender_ip=sender_ip,
             ollama_evaluation=json.dumps(ollama_evaluation), # Store as JSON string
-            raw_email_id=raw_email_entry.id
         )
+        raw_email_entry.parsed_email = parsed_email_entry
         db.add(parsed_email_entry)
+        db.add(raw_email_entry)
         db.commit()
         db.refresh(parsed_email_entry)
+        db.refresh(raw_email_entry)
         logger.info("Parsed EML data saved to database with ID: %s", parsed_email_entry.id)
 
         return parsed_data_for_ollama
@@ -112,9 +116,21 @@ async def get_visualization_data(db: Session = Depends(get_db)):
     """
     Retrieve all data from both tables for visualization.
     """
-    parsed_emails = db.query(ParsedEmail).all()
-    raw_emails = db.query(RawEmail).all()
-    return {"parsed_emails": parsed_emails, "raw_emails": raw_emails}
+    parsed_emails_db = db.query(ParsedEmail).all()
+    parsed_emails_response = []
+    for email in parsed_emails_db:
+        parsed_emails_response.append({
+            "id": email.id,
+            "from_address": email.from_address,
+            "to_address": email.to_address,
+            "subject": email.subject,
+            "date": email.date,
+            "sender_ip": email.sender_ip,
+            "ollama_evaluation": email.ollama_evaluation,
+            "raw_email_id": email.raw_email.id if email.raw_email else None,
+        })
+    raw_emails = db.query(RawEmail).filter(RawEmail.parsed_email_id != None).all()
+    return {"parsed_emails": parsed_emails_response, "raw_emails": raw_emails}
 
 
 @router.get("/emails", response_model=list[dict])
@@ -132,7 +148,29 @@ async def get_all_emails(db: Session = Depends(get_db)):
             "date": email.date.isoformat(),
             "sender_ip": email.sender_ip,
             "ollama_evaluation": json.loads(email.ollama_evaluation) if email.ollama_evaluation else None,
-            "raw_email_id": email.raw_email_id,
+            "raw_email_id": email.raw_email.id if email.raw_email else None,
         }
         for email in emails
     ]
+
+
+@router.delete("/emails/{email_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_email(email_id: int, db: Session = Depends(get_db)):
+    """
+    Delete a parsed email and its associated raw email content from the database.
+    """
+    parsed_email = db.query(ParsedEmail).filter(ParsedEmail.id == email_id).first()
+    if not parsed_email:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Email with ID {email_id} not found."
+        )
+
+    # Delete associated raw email first
+    if parsed_email.raw_email:
+        db.delete(parsed_email.raw_email)
+
+    db.delete(parsed_email)
+    db.commit()
+    logger.info("Email with ID %s and its raw content deleted successfully.", email_id)
+    return

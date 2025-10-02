@@ -24,7 +24,6 @@ def get_db():
 
 @router.post(
     "/generate_from_file",
-    response_model=RuleGenerationResponse,
     status_code=status.HTTP_200_OK,
     summary="Parse an EML file and generate detection rules",
     description="Upload an email file (.eml or .arf) to parse it and then use an LLM to generate detection rules based on its content.",
@@ -61,7 +60,7 @@ async def generate_rules_from_eml_file(
         )
 
         # Save raw email content
-        raw_email_entry = RawEmail(raw_content=content.decode('utf-8', errors='ignore'))
+        raw_email_entry = RawEmail(raw_content=content.decode('utf-8', errors='ignore').replace('\x00', ''))
         db.add(raw_email_entry)
         db.commit()
         db.refresh(raw_email_entry)
@@ -72,15 +71,21 @@ async def generate_rules_from_eml_file(
         logger.info("Successfully parsed file '%s'.", file.filename)
 
         # Step 2: Generate rules using the Ollama service
-        analysis_result = await generate_rules_for_eml(parsed_data)
-        logger.info(
-            "Successfully generated rules for file '%s'.", file.filename
-        )
+        try:
+            analysis_result = await generate_rules_for_eml(parsed_data)
+            logger.info(
+                "Successfully generated rules for file '%s'.", file.filename
+            )
+        except Exception as ollama_exc:
+            logger.error("Ollama analysis failed: %s", ollama_exc, exc_info=True)
+            analysis_result = {"error": "Ollama analysis failed", "details": str(ollama_exc)}
 
         # Extract fields for parsed_emails table
-        from_address = parsed_data.get("header", {}).get("from", [""])[0]
+        from_address_list = parsed_data.get("header", {}).get("from", [""])
+        from_address = ", ".join(from_address_list) if isinstance(from_address_list, list) else from_address_list
         to_address = parsed_data.get("header", {}).get("to", [""])[0]
-        subject = parsed_data.get("header", {}).get("subject", [""])[0]
+        subject_list = parsed_data.get("header", {}).get("subject", [""])
+        subject = ", ".join(subject_list) if isinstance(subject_list, list) else subject_list
         date_str = parsed_data.get("header", {}).get("date", [""])[0]
         # Attempt to parse date, default to current UTC if parsing fails
         try:
@@ -98,11 +103,13 @@ async def generate_rules_from_eml_file(
             date=date_obj,
             sender_ip=sender_ip,
             ollama_evaluation=json.dumps(analysis_result), # Store as JSON string
-            raw_email_id=raw_email_entry.id
         )
+        raw_email_entry.parsed_email = parsed_email_entry
         db.add(parsed_email_entry)
+        db.add(raw_email_entry)
         db.commit()
         db.refresh(parsed_email_entry)
+        db.refresh(raw_email_entry)
         logger.info("Parsed EML data saved to database with ID: %s", parsed_email_entry.id)
 
         return analysis_result

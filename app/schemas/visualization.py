@@ -9,6 +9,7 @@ class ParsedEmail(BaseModel):
     date: datetime.datetime
     sender_ip: str | None
     ollama_evaluation: str | None
+    raw_email_id: int | None
 
     class Config:
         orm_mode = True

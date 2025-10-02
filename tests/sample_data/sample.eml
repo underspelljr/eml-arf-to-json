@@ -1,10 +1,5 @@
-Date: Tue, 30 Sep 2025 10:00:00 +0100
-From: "Test Sender" <sender@example.com>
-To: "Test Receiver" <receiver@example.com>
+From: sender@example.com
+To: receiver@example.com
 Subject: Test EML
-Message-ID: 12345@local.machine.example
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
 
 This is the body of the test email.
-It has a few lines.

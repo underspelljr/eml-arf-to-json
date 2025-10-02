@@ -55,3 +55,17 @@
 - Implemented a file upload form in the frontend to submit EML/ARF files for analysis and database storage.
 - Modified `app/main.py` to serve static files and redirect the root URL to the visualization page.
 - Modified `app/api/v1/endpoints/rules.py` to save raw email content, parsed data, and Ollama evaluation to the database when an EML/ARF file is submitted to `/api/v1/rules/generate_from_file`.
+
+## 0.4.1 (2025-10-02)
+### QOL: Delete Email Functionality
+- Added a DELETE endpoint `/api/v1/parser/emails/{email_id}` to delete a parsed email and its associated raw content from the database.
+- Implemented a delete button/icon in the frontend for each email entry in the `parsed_emails` table.
+- Added a confirmation modal to verify email deletion from the frontend.
+- Modified `script.js` to handle delete button clicks, show the modal, send DELETE requests, and refresh the tables.
+
+## 0.4.2 (2025-10-02)
+### Bug Fixes and Enhancements
+- Fixed issue where 'subject' and 'from_address' columns in the parsed emails table only showed the first letter by correctly extracting these fields from the EML parser output.
+- Fixed issue where 'raw_email_id' showed as "undefined" in the frontend by adding `raw_email_id: int | None` to the `ParsedEmail` schema in `app/schemas/visualization.py`.
+- Fixed issue where 'raw_content' broke for EML files by removing NUL (0x00) characters from the raw content before saving to the database in `app/api/v1/endpoints/parser.py` and `app/api/v1/endpoints/rules.py`.
+- Created `tests/integration/test_parser_db.py` to test the EML parser and database saving functionality for both EML and ARF files.

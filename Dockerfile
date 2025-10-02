@@ -27,12 +27,14 @@ RUN addgroup --system app && adduser --system --group app
 COPY --from=builder /app/wheels /wheels
 COPY --from=builder /app/requirements.txt .
 RUN pip install --no-cache /wheels/*
+RUN pip install pytest-mock
 
 # Copy application code
 COPY ./app ./app
 COPY ./labeling_guide.md .
 COPY alembic.ini .
 COPY alembic ./alembic
+COPY ./tests ./tests
 
 # Change ownership to the non-root user
 RUN chown -R app:app /app

@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     OTEL_EXPORTER_OTLP_ENDPOINT: str = "http://otel-collector:4317"
 
     # Ollama Settings
-    OLLAMA_HOST: str = "http://ollama:11434"
+    OLLAMA_HOST: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "llama3"
 
     DATABASE_URL: str

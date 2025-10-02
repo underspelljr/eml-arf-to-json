@@ -26,3 +26,5 @@ respx
 ollama
 eml_parser
 loguru
+pytest-mock
+pytest-asyncio
