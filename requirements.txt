@@ -10,6 +10,9 @@ python-dotenv
 ## EML Parsing
 eml-parser
 
+## Ai Integration
+ollama
+
 ## Logging
 loguru
 
