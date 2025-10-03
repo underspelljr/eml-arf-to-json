@@ -147,6 +147,6 @@ New endpoint available:
 Variable        | Description                          | Default
 ---------------------------------------------------------------
 OLLAMA_HOST     | Base URL for the Ollama service      | http://ollama:11434
-OLLAMA_MODEL    | The name of the LLM model to use     | llama3
+OLLAMA_MODEL    | The name of the LLM model to use     | gemma3:12b
 ```
 

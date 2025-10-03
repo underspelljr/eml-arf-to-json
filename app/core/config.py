@@ -17,7 +17,7 @@ class Settings(BaseSettings):
 
     # Ollama Settings
     OLLAMA_HOST: str = "http://localhost:11434"
-    OLLAMA_MODEL: str = "llama3"
+    OLLAMA_MODEL: str = "gemma3:12b"
 
     DATABASE_URL: str
 

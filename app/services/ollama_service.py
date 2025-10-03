@@ -77,7 +77,7 @@ async def generate_rules_for_eml(
         )
 
         content = response["message"]["content"]
-        logger.debug("Received raw response from Ollama.")
+        logger.debug("Received raw response from Ollama. Content: %s, system: %s, user: %s", content, system_prompt, user_prompt)
 
         # The 'format="json"' parameter should ensure this is valid JSON
         analysis_json = json.loads(content)
